@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends protobuf-compiler && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml /app/pyproject.toml
+COPY src/ /app/src/
+COPY protos/ /app/protos/
+
+RUN mkdir -p /app/generated && \
+    protoc \
+      -I /app/protos \
+      --python_out=/app/generated \
+      $(find /app/protos -name "*.proto")
+
+RUN pip install --no-cache-dir .
+
+ENV PYTHONPATH=/app/src:/app/generated
+
+CMD ["python", "-u", "src/main.py"]

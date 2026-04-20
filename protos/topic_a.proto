@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package demo.topic_a;
+
+message TopicAMessage {
+  uint64 cycle_id = 1;
+  int64 created_at_unix_ms = 2;
+  string source = 3;
+  string text = 4;
+}

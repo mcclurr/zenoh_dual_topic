@@ -1,0 +1,43 @@
+services:
+  zenoh:
+    image: eclipse/zenoh:latest
+    hostname: zenoh
+    ports:
+      - "7447:7447"
+      - "8000:8000"
+    environment:
+      - RUST_LOG=info
+
+  main:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.python
+    container_name: zenoh-dual-main
+    depends_on:
+      - zenoh
+    command: ["python", "-u", "src/main.py"]
+    environment:
+      - ZENOH_ENDPOINT=tcp/zenoh:7447
+      - TOPIC_A_KEY=demo/input/a
+      - TOPIC_B_KEY=demo/input/b
+      - MATCH_WINDOW_SECONDS=0.5
+      - PROCESSING_SECONDS=4.0
+    volumes:
+      - ./out:/app/out
+
+  publisher:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.python
+    container_name: zenoh-dual-publisher
+    depends_on:
+      - zenoh
+    command: ["python", "-u", "src/publisher.py"]
+    environment:
+      - ZENOH_ENDPOINT=tcp/zenoh:7447
+      - TOPIC_A_KEY=demo/input/a
+      - TOPIC_B_KEY=demo/input/b
+      - PUBLISH_INTERVAL_SECONDS=1.0
+      - TOPIC_GAP_SECONDS=0.1
+    volumes:
+      - ./out:/app/out
