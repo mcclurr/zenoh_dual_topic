@@ -32,25 +32,31 @@ def open_zenoh_session():
 
 def main() -> None:
     logger = init_logging("publisher")
-    logger.event(
-        "publisher starting",
-        field="startup",
-        payload={
-            "zenoh_endpoint": ZENOH_ENDPOINT,
-            "topic_a_key": TOPIC_A_KEY,
-            "topic_b_key": TOPIC_B_KEY,
-            "publish_interval_seconds": PUBLISH_INTERVAL_SECONDS,
-            "topic_gap_seconds": TOPIC_GAP_SECONDS,
-        },
+    logger.info(
+        "Publisher starting: endpoint=%s topic_a=%s topic_b=%s "
+        "publish_interval=%.3fs topic_gap=%.3fs",
+        ZENOH_ENDPOINT,
+        TOPIC_A_KEY,
+        TOPIC_B_KEY,
+        PUBLISH_INTERVAL_SECONDS,
+        TOPIC_GAP_SECONDS,
     )
 
     with open_zenoh_session() as session:
         pub_a = session.declare_publisher(TOPIC_A_KEY)
         pub_b = session.declare_publisher(TOPIC_B_KEY)
 
+        logger.info(
+            "Publishers declared: topic_a=%s topic_b=%s",
+            TOPIC_A_KEY,
+            TOPIC_B_KEY,
+        )
+
         cycle_id = 1
+
         while True:
             now_ms = int(time.time() * 1000)
+
             msg_a = TopicAMessage(
                 cycle_id=cycle_id,
                 created_at_unix_ms=now_ms,
@@ -65,34 +71,23 @@ def main() -> None:
             )
 
             first = random.choice(["A", "B"])
+
             if first == "A":
                 pub_a.put(msg_a.SerializeToString())
-                logger.event(
-                    "published topic A",
-                    field="publish",
-                    payload={"topic": "A", "cycle_id": cycle_id, "first": True},
-                )
+                logger.info("Published topic A first: cycle_id=%s", cycle_id)
+
                 time.sleep(TOPIC_GAP_SECONDS)
+
                 pub_b.put(msg_b.SerializeToString())
-                logger.event(
-                    "published topic B",
-                    field="publish",
-                    payload={"topic": "B", "cycle_id": cycle_id, "first": False},
-                )
+                logger.info("Published topic B second: cycle_id=%s", cycle_id)
             else:
                 pub_b.put(msg_b.SerializeToString())
-                logger.event(
-                    "published topic B",
-                    field="publish",
-                    payload={"topic": "B", "cycle_id": cycle_id, "first": True},
-                )
+                logger.info("Published topic B first: cycle_id=%s", cycle_id)
+
                 time.sleep(TOPIC_GAP_SECONDS)
+
                 pub_a.put(msg_a.SerializeToString())
-                logger.event(
-                    "published topic A",
-                    field="publish",
-                    payload={"topic": "A", "cycle_id": cycle_id, "first": False},
-                )
+                logger.info("Published topic A second: cycle_id=%s", cycle_id)
 
             cycle_id += 1
             time.sleep(PUBLISH_INTERVAL_SECONDS)
